@@ -1,0 +1,15 @@
+.slidecontainer {
+    width: 100%; /* Width of the outside container */
+    align: center;
+    text-align:center;
+}
+/* The slider itself */
+.slider {
+    width: 100%; /* Full-width */
+    height: 25px; /* Specified height */
+}
+
+/* Mouse-over effects */
+.slider:hover {
+    opacity: 1; /* Fully shown on mouse-over */
+}

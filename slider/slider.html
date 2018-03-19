@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <!--
+  A demo app (just ES5 here), runs standalone in a browser, intended for embedding within a CMS.
+  Useful for the alignment of overlayed images, served by the IIIF Image API,
+  and providing an interactive viewer for overlayed images, presented fluidly, using responsive image tags.
+  -->
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <title>IIIF Slider</title>
+  <script src="slider.js"></script>
+  <link rel="stylesheet" type="text/css" href="style.css"/>
+  <script src="../openseadragon/openseadragon.min.js"></script>
+</head>
+<body>
+    <h1>IIIF Layer Slider</h1>
+    <div class="slidecontainer" width="100%">
+        <div class="controls" align="left" width="100%">
+            <p><b>Manifest: </b><span id="manifest_label"/></p>
+            <p><b>Page: </b><select id="pages"></select></p>
+            <p><b>Layer: </b><span id="layer_label"/></p>
+            <input type="range" min="1" max="2" value="1" class="slider" id="images">
+        </div>
+        <div align="center" width="100%">
+            <!--<img id="image"  width="1024"/>-->
+            <div id="osd" style="height: 1024px;"></div> <!-- style="height: 100%;"-->
+          <!-- src="http://iiif.gdmrdigital.com/image/iiif/2/lc%2Fblock_books%2FBB-AoM_595_00%2FBB-AoM_595_00_PSC.jp2/full/1024,/0/default.jpg"-->
+        </div>
+    </div>
+    <p id="result"></p>
+    <script type="text/javascript">
+        var manifest = null;
+        var layers = [];
+        var previousIndex = -1;
+        var range = document.getElementById("images"),
+        layerLabel = document.getElementById("layer_label"),
+        img = document.getElementById("image"),
+        manifest_label = document.getElementById("manifest_label"),
+        page_label = document.getElementById("page_label"),
+        canvas_dropdown = document.getElementById("pages");
+
+        var osd = OpenSeadragon({
+            id:                 "osd",
+            prefixUrl:          "../openseadragon/images/",
+            preserveViewport:   true,
+            showFullPageControl: false,
+            showSequenceControl: false,
+            visibilityRatio:    1,
+            minZoomLevel:       1,
+            defaultZoomLevel:   1,
+            sequenceMode:       true,
+            tileSources: []
+        });
+
+        if (getAllUrlParams().manifest) {
+            var manifest = loadmanifest(getAllUrlParams().manifest,setManifest);
+        }
+
+        function setManifest(pMan) {
+            manifest = pMan;
+            manifest_label.innerHTML = manifest.label;
+            for (i = 0; i < manifest.sequences[0].canvases.length; i++) {
+                var option = document.createElement("option");
+                option.textContent = manifest.sequences[0].canvases[i].label;
+                option.value = i;
+                canvas_dropdown.appendChild(option);
+            }
+            setCurrentCanvas(0);
+        }
+        function setCurrentCanvas(index) {
+            canvas = manifest.sequences[0].canvases[index]
+
+            layers = getLayers(canvas);
+            osd.open(layers[0].image + "/info.json");
+            images = [];
+            for (i = 0; i < layers.length; i++) {
+                images.push(layers[i].image + "/info.json");
+                if (i > 0) {
+                    osd.addTiledImage({
+                        tileSource: layers[i].image + "/info.json",
+                        index: i,
+                        opacity: 0,
+                        preload: true,
+                        success: function(event) {
+                            console.log('Loaded ' + event);
+                        }});
+                }
+            }
+
+            range.max = layers.length;
+            setCurrentLayer(0);
+        }
+        function setCurrentLayer(index) {
+            layerLabel.innerHTML = layers[index].label;
+            //img.src=layers[index].image + "/full/,512/0/default.jpg";
+            //osd.open(layers[index].image + "/info.json");
+            if (osd.world.getItemCount() > 0){
+                if (previousIndex != -1) {
+                    osd.world.getItemAt(previousIndex).setOpacity(0);
+                }
+                osd.world.getItemAt(index).setOpacity(1);
+            }
+            previousIndex = index;
+        }
+        range.addEventListener("input", function() {
+            setCurrentLayer(range.value - 1);
+        }, false);
+
+        canvas_dropdown.addEventListener("change", function() {
+            setCurrentCanvas(canvas_dropdown.value);
+        }, false);
+    </script>
+</body>
+</html>
